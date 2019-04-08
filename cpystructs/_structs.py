@@ -300,5 +300,5 @@ PyFloatObject.set_fields(
 PyTupleObject.set_fields(
     ob_base=PyVarObject,
     # `ob_item` is replaced with `PyObject*[ob_size]` when accessed
-    _ob_item=c_ssize_t
+    _ob_item=c_void_p
 )
