@@ -58,6 +58,11 @@ class _PyStruct(Structure):
 
         return total
 
+    def field_address(self, field):
+        offset = self.field_offset(field)
+        addr = ctypes.addressof(self)
+        return addr + offset
+
     @property
     def value(self):
         ptr = c_void_p(ctypes.addressof(self))
@@ -106,9 +111,8 @@ class PyTupleObject(_PyStruct):
         size = self.ob_base.ob_size
         array = POINTER(PyObject) * size
 
-        offset = self.n_bytes_before("_ob_item")
-        array_addr = ctypes.addressof(self) + offset
-        return array.from_address(array_addr)
+        address = self.field_address("_ob_item")
+        return array.from_address(addressq)
 
 # all structs have been defined, so now we can import the func types
 from ._funcs import *
