@@ -4,7 +4,6 @@ from ctypes import (
     c_ulong, c_void_p, POINTER, py_object, Structure
 )
 
-
 __all__ = [
     "PyAsyncMethods",
     "PyBufferProcs",
@@ -18,6 +17,7 @@ __all__ = [
     "PyNumberMethods",
     "PyObject",
     "PySequenceMethods",
+    "PyTupleObject",
     "PyTypeObject",
     "PyVarObject",
     "Py_buffer",
@@ -90,15 +90,25 @@ class PyLongObject(_PyStruct):
     @property
     def ob_digit(self):
         size = self.ob_base.ob_size
-        array = c_uint32 * size  # uint32[size]
+        array = c_uint32 * size
         return ctypes.cast(self._ob_digit, array)
 
 class PyListObject(_PyStruct):
     @property
     def ob_item(self):
         size = self.ob_base.ob_size
-        array = POINTER(POINTER(PyObject) * size)  # PyObject **
-        return ctypes.cast(self._ob_item, array)
+        ptr = POINTER(POINTER(PyObject) * size)  # PyObject **
+        return ctypes.cast(self._ob_item, ptr)
+
+class PyTupleObject(_PyStruct):
+    @property
+    def ob_item(self):
+        size = self.ob_base.ob_size
+        array = POINTER(PyObject) * size
+
+        offset = self.n_bytes_before("_ob_item")
+        array_addr = ctypes.addressof(self) + offset
+        return array.from_address(array_addr)
 
 # all structs have been defined, so now we can import the func types
 from ._funcs import *
@@ -285,4 +295,10 @@ PyListObject.set_fields(
 PyFloatObject.set_fields(
     ob_base=PyObject,
     ob_fval=c_double
+)
+
+PyTupleObject.set_fields(
+    ob_base=PyVarObject,
+    # `ob_item` is replaced with `PyObject*[ob_size]` when accessed
+    _ob_item=c_ssize_t
 )
