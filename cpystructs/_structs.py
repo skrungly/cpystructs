@@ -1,6 +1,6 @@
 import ctypes
 from ctypes import (
-    c_char_p, c_int, c_ssize_t, c_uint, c_uint32,
+    c_char_p, c_double, c_int, c_ssize_t, c_uint, c_uint32,
     c_ulong, c_void_p, POINTER, py_object, Structure
 )
 
@@ -8,6 +8,7 @@ from ctypes import (
 __all__ = [
     "PyAsyncMethods",
     "PyBufferProcs",
+    "PyFloatObject",
     "PyGetSetDef",
     "PyListObject",
     "PyLongObject",
@@ -64,7 +65,7 @@ class PyMethodDef(_PyStruct): ...
 class PyMemberDef(_PyStruct): ...
 class Py_buffer(_PyStruct): ...
 class PyGetSetDef(_PyStruct): ...
-
+class PyFloatObject(_PyStruct): ...
 
 class PyLongObject(_PyStruct):
     @property
@@ -260,4 +261,9 @@ PyListObject.set_fields(
     # `ob_item` is replaced with `PyObject **` when accessed
     _ob_item=c_void_p,
     allocated=c_ssize_t,
+)
+
+PyFloatObject.set_fields(
+    ob_base=PyObject,
+    ob_fval=c_double
 )
