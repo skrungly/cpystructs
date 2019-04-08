@@ -41,7 +41,7 @@ class _PyStruct(Structure):
     @property
     def value(self):
         ptr = c_void_p(ctypes.addressof(self))
-        return cast(ptr, py_object).value
+        return ctypes.cast(ptr, py_object).value
 
     def as_type(self, struct_type):
         return struct_type.from_address(
@@ -72,7 +72,6 @@ class PyLongObject(_PyStruct):
         size = self.ob_base.ob_size
         array = c_uint32 * size  # uint32[size]
         return ctypes.cast(self._ob_digit, array)
-
 
 class PyListObject(_PyStruct):
     @property
