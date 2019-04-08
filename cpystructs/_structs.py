@@ -39,6 +39,25 @@ class _PyStruct(Structure):
     def from_object(cls, obj):
         return cls.from_address(id(obj))
 
+    @classmethod
+    def field_offset(cls, field):
+        """
+        Find how many bytes are before a field. At least for
+        now, this will not check if the given field name is
+        in the struct. If a name is passed which isn't in the
+        struct, this will fall through to the end and return
+        the total size of the struct. For now.
+        """
+
+        total = 0
+        for name, ctype in cls._fields_:
+            if name == field:
+                break
+
+            total += ctypes.sizeof(ctype)
+
+        return total
+
     @property
     def value(self):
         ptr = c_void_p(ctypes.addressof(self))
