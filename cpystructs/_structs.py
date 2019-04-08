@@ -112,7 +112,7 @@ class PyTupleObject(_PyStruct):
         array = POINTER(PyObject) * size
 
         address = self.field_address("_ob_item")
-        return array.from_address(addressq)
+        return array.from_address(address)
 
 # all structs have been defined, so now we can import the func types
 from ._funcs import *
