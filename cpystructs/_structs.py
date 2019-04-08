@@ -1,12 +1,16 @@
 import ctypes
 from ctypes import (
-    c_char_p, c_double, c_int, c_ssize_t, c_uint, c_uint32,
-    c_ulong, c_void_p, POINTER, py_object, Structure
+    c_char, c_char_p, c_double, c_int, c_ssize_t, c_uint,
+    c_uint32, c_ulong, c_void_p, POINTER, py_object, Structure
 )
+
+# TODO: do we want separate "typedefs" for non-standard
+# types in cpython like Py_ssize_t and Py_hash_t? Maybe.
 
 __all__ = [
     "PyAsyncMethods",
     "PyBufferProcs",
+    "PyBytesObject",
     "PyFloatObject",
     "PyGetSetDef",
     "PyListObject",
@@ -112,6 +116,15 @@ class PyTupleObject(_PyStruct):
         array = POINTER(PyObject) * size
 
         address = self.field_address("_ob_item")
+        return array.from_address(address)
+
+class PyBytesObject(_PyStruct):
+    @property
+    def ob_sval(self):
+        size = self.ob_base.ob_size
+        array = c_char * (size + 1)
+
+        address = self.field_address("_ob_sval")
         return array.from_address(address)
 
 # all structs have been defined, so now we can import the func types
@@ -305,4 +318,11 @@ PyTupleObject.set_fields(
     ob_base=PyVarObject,
     # `ob_item` is replaced with `PyObject*[ob_size]` when accessed
     _ob_item=c_void_p
+)
+
+PyBytesObject.set_fields(
+    ob_base=PyVarObject,
+    ob_shash=c_ssize_t,
+    # `ob_sval` is replaced with `char[ob_size]` when accessed
+    _ob_sval=c_void_p
 )
