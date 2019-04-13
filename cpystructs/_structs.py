@@ -1,7 +1,13 @@
+import _ctypes
 import ctypes
+import os
+
+# should we just import * ?
 from ctypes import (
-    c_char, c_char_p, c_double, c_int, c_ssize_t, c_uint,
-    c_uint32, c_ulong, c_void_p, POINTER, py_object, Structure
+    c_char, c_char_p, c_double, c_int, c_int64,
+    c_long, c_size_t, c_ssize_t, c_uint, c_uint32,
+    c_uint64, c_ulong, c_void_p, CFUNCTYPE,
+    POINTER, py_object, Structure
 )
 
 # TODO: do we want separate "typedefs" for non-standard
@@ -11,8 +17,11 @@ __all__ = [
     "PyAsyncMethods",
     "PyBufferProcs",
     "PyBytesObject",
+    "PyCoreConfig",
+    "PyErr_StackItem",
     "PyFloatObject",
     "PyGetSetDef",
+    "PyInterpreterState",
     "PyListObject",
     "PyLongObject",
     "PyMappingMethods",
@@ -21,6 +30,7 @@ __all__ = [
     "PyNumberMethods",
     "PyObject",
     "PySequenceMethods",
+    "PyThreadState",
     "PyTupleObject",
     "PyTypeObject",
     "PyVarObject",
@@ -37,7 +47,12 @@ class _PyStruct(Structure):
 
     @classmethod
     def set_fields(cls, **fields):
-        cls._fields_ = tuple(fields.items())
+        temp = []
+        for name, typ in fields.items():
+            if typ is not None:
+                temp.append((name, typ))
+
+        cls._fields_ = tuple(temp)
 
     @classmethod
     def from_object(cls, obj):
@@ -67,8 +82,7 @@ class _PyStruct(Structure):
         addr = ctypes.addressof(self)
         return addr + offset
 
-    @property
-    def value(self):
+    def get_object(self):
         ptr = c_void_p(ctypes.addressof(self))
         return ctypes.cast(ptr, py_object).value
 
@@ -126,6 +140,11 @@ class PyBytesObject(_PyStruct):
 
         address = self.field_address("_ob_sval")
         return array.from_address(address)
+
+class PyErr_StackItem(_PyStruct): ...
+class PyCoreConfig(_PyStruct): ...
+class PyThreadState(_PyStruct): ...
+class PyInterpreterState(_PyStruct): ...
 
 # all structs have been defined, so now we can import the func types
 from ._funcs import *
@@ -325,4 +344,124 @@ PyBytesObject.set_fields(
     ob_shash=c_ssize_t,
     # `ob_sval` is replaced with `char[ob_size]` when accessed
     _ob_sval=c_void_p
+)
+
+PyErr_StackItem.set_fields(
+    exc_type=POINTER(PyObject),
+    exc_value=POINTER(PyObject),
+    exc_traceback=POINTER(PyObject),
+
+    previous_item=POINTER(PyErr_StackItem)
+)
+
+PyCoreConfig.set_fields(
+    isolated=c_int,
+    use_environment=c_int,
+    _init_main=c_int,
+)
+
+HAVE_DLOPEN = hasattr(_ctypes, "dlopen")
+HAVE_FORK = hasattr(os, "fork")
+
+PyInterpreterState.set_fields(
+    next=POINTER(PyInterpreterState),
+    tstate_head=POINTER(PyThreadState),
+
+    id=c_int64,
+    id_refcount=c_int64,
+    requires_idref=c_int,
+    id_mutex=c_void_p,  # PyThread_type_lock
+
+    finalizing=c_int,
+
+    modules=POINTER(PyObject),
+    modules_by_index=POINTER(PyObject),
+    sysdict=POINTER(PyObject),
+    builtins=POINTER(PyObject),
+    importlib=POINTER(PyObject),
+
+    check_interval=c_int,
+
+    num_threads=c_long,
+    pythread_stacksize=c_size_t,
+
+    codec_search_path=POINTER(PyObject),
+    codec_search_cache=POINTER(PyObject),
+    codec_error_registry=POINTER(PyObject),
+    codecs_initialized=c_int,
+    fscodec_initialized=c_int,
+
+    core_config=PyCoreConfig,
+    dlopenflags=c_int if HAVE_DLOPEN else None,
+
+    dict=POINTER(PyObject),
+    builtins_copy=POINTER(PyObject),
+    import_func=POINTER(PyObject),
+
+    eval_frame=PyFrameEvalFunction,
+
+    co_extra_user_count=c_ssize_t,
+    co_extra_freefuncs=freefunc * 255,
+
+    before_forkers = POINTER(PyObject) if HAVE_FORK else None,
+    after_forkers_parent = POINTER(PyObject) if HAVE_FORK else None,
+    after_forkers_child = POINTER(PyObject) if HAVE_FORK else None,
+
+    pyexitfunc = CFUNCTYPE(None, py_object),
+    pyexitmodule = POINTER(PyObject),
+
+    tstate_next_unique_id = c_uint64
+)
+
+PyThreadState.set_fields(
+    prev=POINTER(PyThreadState),
+    next=POINTER(PyThreadState),
+    interp=POINTER(PyInterpreterState),
+
+    frame=c_void_p,  # TODO: pointer to frame struct
+    recursion_depth=c_int,
+    overflowed=c_char,
+    recursion_critical=c_char,
+    stackcheck_counter=c_int,
+
+    tracing=c_int,
+    use_tracing=c_int,
+
+    c_profilefunc=Py_tracefunc,
+    c_tracefunc=Py_tracefunc,
+    c_profileobj=POINTER(PyObject),
+    c_traceobj=POINTER(PyObject),
+
+    curexc_type=POINTER(PyObject),
+    curexc_value=POINTER(PyObject),
+    curexc_traceback=POINTER(PyObject),
+
+    exc_state=PyErr_StackItem,
+    exc_info=PyErr_StackItem,
+
+    dict=POINTER(PyObject),
+
+    gilstate_counter=c_int,
+
+    async_exc=POINTER(PyObject),
+    thread_id=c_ulong,
+
+    trash_delete_nesting=c_int,
+    trash_delete_later=POINTER(PyObject),
+
+    on_delete=CFUNCTYPE(None, c_void_p),
+    on_delete_data=c_void_p,
+
+    coroutine_origin_tracking_depth=c_int,
+
+    coroutine_wrapper=POINTER(PyObject),
+    in_coroutine_wrapper=c_int,
+
+    async_gen_firstiter=POINTER(PyObject),
+    async_gen_finalizer=POINTER(PyObject),
+
+    context=POINTER(PyObject),
+    context_ver=c_uint64,
+
+    id=c_uint64
 )

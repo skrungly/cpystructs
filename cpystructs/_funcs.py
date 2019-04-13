@@ -26,6 +26,8 @@ __all__ = [
     "objobjargproc",
     "objobjproc",
     "printfunc",
+    "Py_tracefunc",
+    "PyFrameEvalFunction",
     "releasebufferproc",
     "reprfunc",
     "richcmpfunc",
@@ -88,3 +90,7 @@ setter = CFUNCTYPE(c_int, py_object, py_object, c_void_p)
 
 # TODO: give the c_void_p here an actual type (preferably FILE *)
 printfunc = CFUNCTYPE(c_int, py_object, c_void_p, c_int)
+
+# and make this c_void_p a pointer to a frame struct
+Py_tracefunc = CFUNCTYPE(c_int, py_object, c_void_p, c_int, py_object)
+PyFrameEvalFunction = CFUNCTYPE(py_object, c_void_p, c_int)
