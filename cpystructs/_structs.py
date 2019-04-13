@@ -1,7 +1,8 @@
 import ctypes
 from ctypes import (
     c_char, c_char_p, c_double, c_int, c_ssize_t, c_uint,
-    c_uint32, c_ulong, c_void_p, POINTER, py_object, Structure
+    c_uint32, c_ulong, c_void_p, CFUNCTYPE, POINTER,
+    py_object, Structure
 )
 
 # TODO: do we want separate "typedefs" for non-standard
@@ -88,7 +89,39 @@ class _PyStruct(Structure):
 # 2 - to avoid circular imports with the `_funcs.py` script
 class PyObject(_PyStruct): ...
 class PyVarObject(_PyStruct): ...
-class PyTypeObject(_PyStruct): ...
+
+class PyTypeObject(_PyStruct):
+    @property
+    def tp_methods(self):
+        method_size = ctypes.sizeof(PyMethodDef)
+        offset = 0
+
+        while c_void_p.from_address(self._tp_methods + offset):
+            offset += method_size
+
+        method_count = offset // method_size
+        array_type = PyMethodDef * method_count
+
+        return array_type.from_address(self._tp_methods)
+
+    def get_tp_method(self, name):
+        """
+        Get a specific method from `tp_methods` by name.
+
+        This is just a small helper method so that you don't
+        need to get your methods by index. Returns None if
+        the name wasn't in the PyMethodDef.
+        """
+
+        if isinstance(name, str):
+            name = name.encode()
+
+        for method in self.tp_methods:
+            if method.ml_name == name:
+                return method
+
+        return None
+
 class PyAsyncMethods(_PyStruct): ...
 class PyNumberMethods(_PyStruct): ...
 class PySequenceMethods(_PyStruct): ...
@@ -191,7 +224,8 @@ PyTypeObject.set_fields(
     tp_iter=getiterfunc,
     tp_iternext=iternextfunc,
 
-    tp_methods=POINTER(PyMethodDef),
+    # This is covered by the `tp_methods` property
+    _tp_methods=c_void_p,
     tp_members=POINTER(PyMemberDef),
     tp_getset=POINTER(PyGetSetDef),
     tp_base=POINTER(PyTypeObject),
@@ -213,6 +247,21 @@ PyTypeObject.set_fields(
 
     tp_version_tag=c_uint,
     tp_finalize=destructor,
+)
+
+PyMethodDef.set_fields(
+    ml_name=c_char_p,
+    ml_meth=PyCFunction,
+    ml_flags=c_int,
+    ml_doc=c_char_p,
+)
+
+PyMemberDef.set_fields(
+    name=c_char_p,
+    type=c_int,
+    offset=c_ssize_t,
+    flags=c_int,
+    doc=c_char_p,
 )
 
 PyAsyncMethods.set_fields(

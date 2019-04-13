@@ -26,6 +26,7 @@ __all__ = [
     "objobjargproc",
     "objobjproc",
     "printfunc",
+    "PyCFunction",
     "releasebufferproc",
     "reprfunc",
     "richcmpfunc",
@@ -50,7 +51,7 @@ binaryfunc = CFUNCTYPE(py_object, py_object, py_object)
 ternaryfunc = CFUNCTYPE(py_object, py_object, py_object, py_object)
 inquiry = CFUNCTYPE(c_int, py_object)
 lenfunc = CFUNCTYPE(c_ssize_t, py_object)
-ssizeargfunc = CFUNCTYPE(py_object, c_ssize_t)
+ssizeargfunc = CFUNCTYPE(py_object, py_object, c_ssize_t)
 ssizessizeargfunc = CFUNCTYPE(py_object, c_ssize_t, c_ssize_t)
 ssizeobjargproc = CFUNCTYPE(c_int, py_object, c_ssize_t, py_object)
 ssizessizeobjargproc = CFUNCTYPE(
@@ -85,6 +86,8 @@ allocfunc = CFUNCTYPE(py_object, POINTER(PyTypeObject), c_ssize_t)
 
 getter = CFUNCTYPE(py_object, py_object, c_void_p)
 setter = CFUNCTYPE(c_int, py_object, py_object, c_void_p)
+
+PyCFunction = CFUNCTYPE(py_object, py_object, py_object)
 
 # TODO: give the c_void_p here an actual type (preferably FILE *)
 printfunc = CFUNCTYPE(c_int, py_object, c_void_p, c_int)
