@@ -8,6 +8,12 @@ from ctypes import (
 # TODO: do we want separate "typedefs" for non-standard
 # types in cpython like Py_ssize_t and Py_hash_t? Maybe.
 
+# TODO: _PyStruct types have a `get_object` class method.
+# this isn't great because not all _PyStruct subclasses
+# are for object structs. we should make use of proper
+# subclassing as shown in the docs of ctypes.Structure
+# then move the class method to the PyObject class.
+
 __all__ = [
     "PyAsyncMethods",
     "PyBufferProcs",
