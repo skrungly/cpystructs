@@ -37,7 +37,12 @@ class _PyStruct(Structure):
 
     @classmethod
     def set_fields(cls, **fields):
-        cls._fields_ = tuple(fields.items())
+        temp = []
+        for name, typ in fields.items():
+            if typ is not None:
+                temp.append((name, typ))
+
+        cls._fields_ = tuple(temp)
 
     @classmethod
     def from_object(cls, obj):
