@@ -130,7 +130,18 @@ class PyBytesObject(_PyStruct):
 # all structs have been defined, so now we can import the func types
 from ._funcs import *
 
+# if python was configured using the --with-pydebug option
+# before being compiled, the PyObject struct will contain two
+# additional pointers to other PyObjects, forming a doubly-
+# linked list of structs.
+WITH_PYDEBUG = object().__sizeof__ == (
+    ctypes.sizeof(c_ssize_t) * 4
+)
+
 PyObject.set_fields(
+    # this could probably be cleaner but oh well.
+    _ob_next=POINTER(PyObject) if WITH_PYDEBUG else None,
+    _ob_prev=POINTER(PyObject) if WITH_PYDEBUG else None,
     ob_refcount=c_ssize_t,
     ob_type=POINTER(PyTypeObject),
 )
