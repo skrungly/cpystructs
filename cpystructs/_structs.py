@@ -139,7 +139,7 @@ from ._funcs import *
 # before being compiled, the PyObject struct will contain two
 # additional pointers to other PyObjects, forming a doubly-
 # linked list of structs.
-WITH_PYDEBUG = object().__sizeof__ == (
+WITH_PYDEBUG = object().__sizeof__() == (
     ctypes.sizeof(c_ssize_t) * 4
 )
 
