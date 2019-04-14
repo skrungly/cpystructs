@@ -79,8 +79,7 @@ class _PyStruct(Structure):
         addr = ctypes.addressof(self)
         return addr + offset
 
-    @property
-    def value(self):
+    def get_object(self):
         ptr = c_void_p(ctypes.addressof(self))
         return ctypes.cast(ptr, py_object).value
 
@@ -95,6 +94,7 @@ class _PyStruct(Structure):
 # 2 - to avoid circular imports with the `_funcs.py` script
 class PyObject(_PyStruct): ...
 class PyVarObject(_PyStruct): ...
+
 
 class PyTypeObject(_PyStruct):
     @property
@@ -128,6 +128,44 @@ class PyTypeObject(_PyStruct):
 
         return None
 
+
+class PyLongObject(_PyStruct):
+    @property
+    def ob_digit(self):
+        size = self.ob_base.ob_size
+        array = c_uint32 * size
+        return ctypes.cast(self._ob_digit, array)
+
+
+class PyListObject(_PyStruct):
+    @property
+    def ob_item(self):
+        size = self.ob_base.ob_size
+        ptr = POINTER(POINTER(PyObject) * size)  # PyObject **
+        return ctypes.cast(self._ob_item, ptr)
+
+
+class PyTupleObject(_PyStruct):
+    @property
+    def ob_item(self):
+        size = self.ob_base.ob_size
+        array = POINTER(PyObject) * size
+
+        address = self.field_address("_ob_item")
+        return array.from_address(address)
+
+
+class PyBytesObject(_PyStruct):
+    @property
+    def ob_sval(self):
+        size = self.ob_base.ob_size
+        array = c_char * (size + 1)
+
+        address = self.field_address("_ob_sval")
+        return array.from_address(address)
+
+
+# The following structs do not define objects. They are very internal.
 class PyAsyncMethods(_PyStruct): ...
 class PyNumberMethods(_PyStruct): ...
 class PySequenceMethods(_PyStruct): ...
@@ -139,37 +177,6 @@ class Py_buffer(_PyStruct): ...
 class PyGetSetDef(_PyStruct): ...
 class PyFloatObject(_PyStruct): ...
 
-class PyLongObject(_PyStruct):
-    @property
-    def ob_digit(self):
-        size = self.ob_base.ob_size
-        array = c_uint32 * size
-        return ctypes.cast(self._ob_digit, array)
-
-class PyListObject(_PyStruct):
-    @property
-    def ob_item(self):
-        size = self.ob_base.ob_size
-        ptr = POINTER(POINTER(PyObject) * size)  # PyObject **
-        return ctypes.cast(self._ob_item, ptr)
-
-class PyTupleObject(_PyStruct):
-    @property
-    def ob_item(self):
-        size = self.ob_base.ob_size
-        array = POINTER(PyObject) * size
-
-        address = self.field_address("_ob_item")
-        return array.from_address(address)
-
-class PyBytesObject(_PyStruct):
-    @property
-    def ob_sval(self):
-        size = self.ob_base.ob_size
-        array = c_char * (size + 1)
-
-        address = self.field_address("_ob_sval")
-        return array.from_address(address)
 
 # all structs have been defined, so now we can import the func types
 from ._funcs import *
