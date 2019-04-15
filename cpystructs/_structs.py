@@ -162,12 +162,34 @@ class PyNumberMethods(_PyStruct): ...
 class PySequenceMethods(_PyStruct): ...
 class PyMappingMethods(_PyStruct): ...
 class PyBufferProcs(_PyStruct): ...
-class PyMethodDef(_PyStruct): ...
 class PyMemberDef(_PyStruct): ...
 class Py_buffer(_PyStruct): ...
 class PyGetSetDef(_PyStruct): ...
 class PyFloatObject(_PyStruct): ...
 
+# For brevity. Sorry, but this isn't Java. Arg and restypes are later.
+call_pymethoddef = ctypes.pythonapi._PyMethodDef_RawFastCallDict
+
+
+class PyMethodDef(_PyStruct):
+    def call_method(self, instance, *args, **kwargs):
+        # The _PyMethodDef_RawFastCallDict function requires an array
+        # of pointers to PyObjects instead of a tuple of args.
+        arg_array_type = (py_object * len(args))
+        args_ptr = ctypes.cast(
+            arg_array_type(*args), POINTER(py_object)
+        )
+
+        return call_pymethoddef(
+            self, instance, args_ptr, len(args), kwargs
+        )
+
+
+call_pymethoddef.restype = py_object
+call_pymethoddef.argtypes = (
+    POINTER(PyMethodDef), py_object,
+    POINTER(py_object), c_ssize_t, py_object
+)
 
 # all structs have been defined, so now we can import the func types
 from ._funcs import *
